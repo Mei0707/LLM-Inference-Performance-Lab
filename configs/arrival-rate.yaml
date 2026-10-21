@@ -1,0 +1,46 @@
+experiment:
+  name: arrival-rate
+  repetitions: 3
+  warmup_requests: 10
+  random_seed: 42
+  timeout_seconds: 900
+model:
+  id: Qwen/Qwen2.5-1.5B-Instruct
+  revision: 989aa7980e4cf806f80c7fef2b1adb7bc71aa306
+  dtype: half
+  max_model_len: 8192
+servers:
+- name: baseline
+  base_url: http://127.0.0.1:8000
+  serving_flags:
+    max_num_batched_tokens: 2048
+    max_num_seqs: 32
+    enable_prefix_caching: false
+  runtime:
+    container_image: vllm/vllm-openai:v0.12.0
+workload:
+  requests: 100
+  input_tokens: 512
+  max_output_tokens: 128
+  concurrency: 32
+  mode: open_loop
+  arrival_rate:
+  - 1
+  - 2
+  - 4
+  - 8
+  arrival_distribution: poisson
+  max_pending: 100
+metrics:
+  collect_gpu: true
+  require_gpu: true
+  collect_server: true
+  sample_interval_ms: 500
+report:
+  percentiles:
+  - 50
+  - 95
+  - 99
+  p99_min_samples: 100
+  slo_ttft_ms: 1000
+  slo_latency_ms: 10000

@@ -1,0 +1,89 @@
+services:
+  mock:
+    build: .
+    command: ["mock-server", "--host", "0.0.0.0", "--port", "8000"]
+    ports: ["127.0.0.1:8000:8000"]
+    profiles: ["mock"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  vllm:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:v0.12.0}
+    profiles: ["gpu"]
+    gpus: all
+    ipc: host
+    ports: ["127.0.0.1:8000:8000"]
+    volumes: ["model-cache:/root/.cache/huggingface"]
+    command:
+      - --model
+      - ${MODEL_ID:-Qwen/Qwen2.5-1.5B-Instruct}
+      - --revision
+      - ${MODEL_REVISION:-989aa7980e4cf806f80c7fef2b1adb7bc71aa306}
+      - --tokenizer-revision
+      - ${MODEL_REVISION:-989aa7980e4cf806f80c7fef2b1adb7bc71aa306}
+      - --dtype
+      - half
+      - --max-model-len
+      - "8192"
+      - --max-num-batched-tokens
+      - "2048"
+      - --max-num-seqs
+      - "32"
+      - --no-enable-prefix-caching
+      - --generation-config
+      - vllm
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+
+  bench:
+    build: .
+    profiles: ["tools"]
+    volumes: ["./results:/app/results", "./configs:/app/configs:ro"]
+    command: ["run", "/app/configs/compose-mock.yaml"]
+
+  bench-gpu:
+    build: .
+    profiles: ["tools"]
+    gpus: all
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    volumes: ["./results:/app/results", "./configs:/app/configs:ro", "model-cache:/root/.cache/huggingface"]
+    command: ["run", "/app/configs/compose-gpu.yaml"]
+
+  dcgm:
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:4.2.3-4.2.0-ubuntu22.04
+    profiles: ["gpu"]
+    gpus: all
+    cap_add: ["SYS_ADMIN"]
+    environment:
+      DCGM_EXPORTER_INTERVAL: "500"
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    ports: ["127.0.0.1:9090:9090"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    ports: ["127.0.0.1:3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-inference-lab-local}
+    volumes:
+      - ./dashboards/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards/grafana/inference-lab.json:/var/lib/grafana/dashboards/inference-lab.json:ro
+      - grafana-data:/var/lib/grafana
+
+volumes:
+  model-cache:
+  prometheus-data:
+  grafana-data:

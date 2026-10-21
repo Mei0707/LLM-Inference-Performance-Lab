@@ -1,0 +1,24 @@
+experiment:
+  name: mock-concurrency
+  repetitions: 3
+  warmup_requests: 2
+  random_seed: 42
+model:
+  id: mock-model
+  revision: mock-v1
+  tokenizer: mock
+workload:
+  requests: 24
+  input_tokens: 32
+  max_output_tokens: 8
+  concurrency:
+  - 1
+  - 4
+  - 8
+metrics:
+  exporter_port: 9108
+  exporter_host: 0.0.0.0
+  collect_gpu: false
+  sample_interval_ms: 50
+servers:
+- base_url: http://mock:8000

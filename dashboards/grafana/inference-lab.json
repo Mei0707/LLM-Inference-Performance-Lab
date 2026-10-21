@@ -1,0 +1,408 @@
+{
+  "uid": "inference-lab",
+  "title": "LLM Inference Lab \u2014 server and GPU observations",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": [
+    "inference-lab"
+  ],
+  "editable": true,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "backend",
+        "label": "Backend (mock is simulation)",
+        "type": "custom",
+        "query": "vllm,mock",
+        "current": {
+          "text": "vllm",
+          "value": "vllm"
+        },
+        "options": [
+          {
+            "text": "vllm",
+            "value": "vllm",
+            "selected": true
+          },
+          {
+            "text": "mock",
+            "value": "mock",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Active requests",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "vllm:num_requests_running{job=\"$backend\"}",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Waiting requests",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "vllm:num_requests_waiting{job=\"$backend\"}",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Completed requests / second",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(vllm:request_success_total{job=\"$backend\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Output tokens / second",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(vllm:generation_tokens_total{job=\"$backend\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "GPU compute utilization",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "DCGM_FI_DEV_GPU_UTIL",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "GPU used memory",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "DCGM_FI_DEV_FB_USED * 1024 * 1024",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "KV cache utilization",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "vllm:kv_cache_usage_perc{job=\"$backend\"} or vllm:gpu_cache_usage_perc{job=\"$backend\"}",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "p95 server TTFT",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket{job=\"$backend\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "p95 server end-to-end latency",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{job=\"$backend\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Mock failures (fixture only)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "increase(inference_lab_mock_failures_total{job=\"mock\"}[$__range])",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Scheduler preemptions / second",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(vllm:num_preemptions_total{job=\"$backend\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Scrape target health",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "up{job=~\"$backend|gpu\"}",
+          "refId": "A",
+          "legendFormat": "{{job}} {{model_name}} {{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Client failures, timeouts, drops and cancellations",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "inference-lab-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum by (error_type) (increase(inference_lab_requests_total{status!=\"success\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "{{error_type}}"
+        }
+      ]
+    }
+  ],
+  "description": "Server histograms are independent of client measurements. Missing metrics stay empty. Client failure counts require the optional benchmark exporter; use raw request artifacts for exact counts, particularly for short runs between scrapes."
+}

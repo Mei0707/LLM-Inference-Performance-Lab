@@ -1,0 +1,8 @@
+regression:
+  rules:
+    - metric: output_tokens_per_second
+      minimum_ratio: 0.95
+    - metric: p95_ttft_ms
+      maximum_ratio: 1.10
+    - metric: error_rate
+      maximum: 0.01
